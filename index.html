@@ -1,0 +1,492 @@
+<!doctype html>
+<html lang="id" class="h-full">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <!-- Primary Meta Tags -->
+  <title>Kultum Dashboard - Manajemen Masjid Al-Ikhlas</title>
+  <meta name="title" content="Kultum Dashboard - Manajemen Masjid Al-Ikhlas">
+  <meta name="description" content="Pantau jadwal kultum, realisasi kehadiran khotib, dan transparansi laporan keuangan masjid secara real-time.">
+
+  <!-- Open Graph / Facebook / WhatsApp -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://github.com/">
+  <meta property="og:title" content="Kultum Dashboard - Masjid Al-Ikhlas">
+  <meta property="og:description" content="Sistem monitoring jadwal ibadah dan transparansi keuangan masjid yang modern dan responsif.">
+  <meta property="og:image" content="https://images.unsplash.com/photo-1542744173-8e7e53415bb0?auto=format&fit=crop&q=80&w=1000">
+
+  <!-- Twitter -->
+  <meta property="twitter:card" content="summary_large_image">
+  <meta property="twitter:title" content="Kultum Dashboard - Masjid Al-Ikhlas">
+  <meta property="twitter:description" content="Sistem monitoring jadwal ibadah dan transparansi keuangan masjid yang modern dan responsif.">
+  <meta property="twitter:image" content="https://images.unsplash.com/photo-1542744173-8e7e53415bb0?auto=format&fit=crop&q=80&w=1000">
+
+  <!-- Scripts -->
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lucide@0.263.0/dist/umd/lucide.min.js"></script>
+  <script src="/_sdk/element_sdk.js"></script>
+  <script src="/_sdk/data_sdk.js"></script>
+  
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+  <style>
+    * { font-family: 'Plus Jakarta Sans', sans-serif; box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; padding: 0; }
+    .tab-active { color: var(--clr-primary); border-bottom: 3px solid var(--clr-primary); }
+    .tab-inactive { color: var(--clr-text); border-bottom: 3px solid transparent; opacity: 0.6; }
+    .tab-inactive:hover { color: var(--clr-primary); opacity: 1; }
+    .card-shadow { box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+    .card-shadow-lg { box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
+    @keyframes fadeUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+    .anim-fade { animation: fadeUp 0.35s ease-out both; }
+    @keyframes spin-slow { to { transform: rotate(360deg); } }
+    .spin-slow { animation: spin-slow 1s linear infinite; }
+    .status-hadir { background: #dcfce7; color: #166534; }
+    .status-tanpa { background: #fee2e2; color: #991b1b; }
+    .status-pending { background: #fef3c7; color: #92400e; }
+    .overlay-bg { background: rgba(0,0,0,0.4); backdrop-filter: blur(2px); }
+    :root { --clr-primary: #ea580c; --clr-surface: #ffffff; --clr-text: #1c1917; --clr-bg: #fff7ed; --clr-accent: #fb923c; }
+    .scrollbar-thin::-webkit-scrollbar { width: 4px; }
+    .scrollbar-thin::-webkit-scrollbar-thumb { background: #d4d4d4; border-radius: 4px; }
+  </style>
+ </head>
+ <body class="h-full" style="background:var(--clr-bg); color:var(--clr-text);">
+  <div id="app" class="h-full w-full flex flex-col overflow-auto scrollbar-thin">
+   <header class="w-full px-4 pt-5 pb-2">
+    <div class="max-w-2xl mx-auto">
+     <p id="mosqueName" class="text-xs font-semibold tracking-widest uppercase opacity-60 mb-1">Masjid Al-Ikhlas</p>
+     <h1 id="appTitle" class="text-2xl font-800 tracking-tight" style="color:var(--clr-primary);">Kultum Dashboard</h1>
+    </div>
+   </header>
+
+   <nav class="w-full sticky top-0 z-30" style="background:var(--clr-bg);">
+    <div class="max-w-2xl mx-auto flex">
+        <button onclick="switchTab('dashboard')" id="tab-dashboard" class="tab-active flex-1 py-3 text-sm font-700 text-center transition-all">
+            <span class="flex items-center justify-center gap-1.5"><i data-lucide="layout-dashboard" style="width:16px;height:16px;"></i> Dashboard</span>
+        </button>
+        <button onclick="switchTab('schedule')" id="tab-schedule" class="tab-inactive flex-1 py-3 text-sm font-700 text-center transition-all">
+            <span class="flex items-center justify-center gap-1.5"><i data-lucide="calendar" style="width:16px;height:16px;"></i> <span>Jadwal</span></span>
+        </button>
+        <button onclick="switchTab('finance')" id="tab-finance" class="tab-inactive flex-1 py-3 text-sm font-700 text-center transition-all">
+            <span class="flex items-center justify-center gap-1.5"><i data-lucide="wallet" style="width:16px;height:16px;"></i> <span>Keuangan</span></span>
+        </button>
+    </div>
+   </nav>
+
+   <main class="flex-1 w-full px-4 pb-24">
+    <div class="max-w-2xl mx-auto">
+     <!-- DASHBOARD -->
+     <section id="page-dashboard" class="py-4 space-y-4 anim-fade">
+      <div class="card-shadow-lg rounded-2xl p-5" style="background:var(--clr-surface);">
+       <h2 class="text-sm font-700 uppercase tracking-wider opacity-50 mb-4">Realisasi Kultum</h2>
+       <div class="flex items-center gap-6">
+        <div class="relative" style="width:100px;height:100px;">
+         <svg id="donutChart" viewbox="0 0 36 36" class="w-full h-full" style="transform:rotate(-90deg);">
+            <circle cx="18" cy="18" r="14" fill="none" stroke="#f3f4f6" stroke-width="4" />
+            <circle id="donutHadir" cx="18" cy="18" r="14" fill="none" stroke="var(--clr-primary)" stroke-width="4" stroke-dasharray="0 87.96" stroke-linecap="round" style="transition:stroke-dasharray 0.8s ease;" />
+         </svg>
+         <div class="absolute inset-0 flex flex-col items-center justify-center"><span id="donutPercent" class="text-xl font-800" style="color:var(--clr-primary);">0%</span></div>
+        </div>
+        <div class="flex-1 space-y-1.5">
+         <div class="flex items-center justify-between text-sm"><span>Hadir</span> <strong id="statHadir">0</strong></div>
+         <div class="flex items-center justify-between text-sm opacity-60"><span>Tanpa Ket.</span> <strong id="statTanpa">0</strong></div>
+         <div class="flex items-center justify-between text-sm opacity-60"><span>Pending</span> <strong id="statPending">0</strong></div>
+        </div>
+       </div>
+      </div>
+
+      <div class="card-shadow rounded-2xl p-5" style="background:var(--clr-surface);">
+       <h2 class="text-sm font-700 uppercase tracking-wider opacity-50 mb-3">Jadwal 1 Minggu Ke Depan</h2>
+       <div id="upcomingList" class="overflow-x-auto">
+        <table class="w-full text-xs">
+         <tbody id="upcomingTableBody">
+          <tr><td class="text-center py-4 opacity-40 italic">Memuat data...</td></tr>
+         </tbody>
+        </table>
+       </div>
+      </div>
+
+      <div class="grid grid-cols-3 gap-3">
+       <div class="card-shadow rounded-xl p-3 text-center" style="background:var(--clr-surface);">
+        <p class="text-[10px] opacity-50 font-600">Pemasukan</p>
+        <p id="sumIn" class="text-sm font-800 text-green-600">Rp 0</p>
+       </div>
+       <div class="card-shadow rounded-xl p-3 text-center" style="background:var(--clr-surface);">
+        <p class="text-[10px] opacity-50 font-600">Pengeluaran</p>
+        <p id="sumOut" class="text-sm font-800 text-red-600">Rp 0</p>
+       </div>
+       <div class="card-shadow rounded-xl p-3 text-center" style="background:var(--clr-primary);">
+        <p class="text-[10px] text-white opacity-70 font-600">Saldo</p>
+        <p id="sumBalance" class="text-sm font-800 text-white">Rp 0</p>
+       </div>
+      </div>
+     </section>
+
+     <!-- SCHEDULE -->
+     <section id="page-schedule" class="py-4 space-y-3 hidden anim-fade"></section>
+
+     <!-- FINANCE -->
+     <section id="page-finance" class="py-4 space-y-3 hidden anim-fade"></section>
+    </div>
+   </main>
+  </div>
+
+  <!-- UI CONTROLS -->
+  <div class="fixed bottom-5 right-5 z-50 flex flex-col items-end gap-3">
+    <button id="fabAdd" onclick="openAddModal()" class="hidden w-14 h-14 rounded-full flex items-center justify-center text-white card-shadow-lg scale-100 hover:scale-110 active:scale-95 transition-transform" style="background:var(--clr-primary);">
+        <i data-lucide="plus" style="width:28px;height:28px;"></i>
+    </button>
+    <button id="fabAdmin" onclick="openPasswordModal()" class="w-11 h-11 rounded-full flex items-center justify-center card-shadow bg-white hover:bg-orange-50 transition-colors">
+        <i data-lucide="settings" style="width:18px;height:18px;"></i>
+    </button>
+  </div>
+
+  <div id="adminBadge" class="hidden fixed top-3 right-3 z-50 px-3 py-1 rounded-full text-[10px] font-700 text-white shadow-sm" style="background:var(--clr-primary);">ADMIN MODE</div>
+
+  <!-- MODALS -->
+  <div id="passwordOverlay" class="hidden fixed inset-0 z-50 overlay-bg flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="w-full sm:max-w-md bg-white sm:rounded-2xl rounded-t-2xl p-6 shadow-2xl">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="font-800 text-orange-600">Otoritas Admin</h3>
+            <button onclick="closePasswordModal()" class="p-1 opacity-50"><i data-lucide="x" class="w-5 h-5"></i></button>
+        </div>
+        <form onsubmit="handlePasswordSubmit(event)" class="space-y-4">
+            <input id="passwordInput" type="password" required class="w-full border rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-orange-200" placeholder="Password admin123">
+            <button type="submit" class="w-full py-3 rounded-xl text-white font-700 bg-orange-600">Verifikasi</button>
+        </form>
+    </div>
+  </div>
+
+  <div id="modalOverlay" class="hidden fixed inset-0 z-50 overlay-bg flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="w-full sm:max-w-md bg-white sm:rounded-2xl rounded-t-2xl p-6 max-h-[90%] overflow-auto shadow-2xl">
+        <div class="flex items-center justify-between mb-6">
+            <h3 id="modalTitle" class="text-lg font-800 text-orange-600">Tambah Data</h3>
+            <button onclick="closeModal()" class="p-1 opacity-40"><i data-lucide="x" class="w-6 h-6"></i></button>
+        </div>
+        <form id="modalForm" onsubmit="handleFormSubmit(event)" class="space-y-4">
+            <div id="formFields" class="space-y-4"></div>
+            <button type="submit" id="submitBtn" class="w-full py-3.5 rounded-xl text-white font-800 bg-orange-600 shadow-lg shadow-orange-200 mt-2">
+                <span id="submitText">Simpan Data</span>
+                <i id="submitLoader" data-lucide="loader" class="hidden spin-slow mx-auto"></i>
+            </button>
+        </form>
+    </div>
+  </div>
+
+  <div id="deleteOverlay" class="hidden fixed inset-0 z-50 overlay-bg flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl p-6 max-w-sm w-full text-center shadow-2xl">
+        <div class="w-16 h-16 rounded-full bg-red-50 mx-auto mb-4 flex items-center justify-center">
+            <i data-lucide="trash-2" class="w-8 h-8 text-red-600"></i>
+        </div>
+        <h3 class="text-lg font-800 mb-2">Hapus Permanen?</h3>
+        <p class="text-sm opacity-60 mb-6">Tindakan ini tidak dapat dibatalkan.</p>
+        <div class="flex gap-3">
+            <button onclick="closeDeleteConfirm()" class="flex-1 py-3 rounded-xl font-700 bg-gray-50">Batal</button>
+            <button onclick="confirmDelete()" id="confirmDelBtn" class="flex-1 py-3 rounded-xl font-700 text-white bg-red-600">Hapus</button>
+        </div>
+    </div>
+  </div>
+
+  <div id="toastContainer" class="fixed top-6 left-1/2 -translate-x-1/2 z-[100] flex flex-col items-center gap-2"></div>
+
+  <script>
+    let currentTab = 'dashboard';
+    let isAdmin = false;
+    let allData = [];
+    let pendingDeleteRecord = null;
+
+    // --- HELPER WRAPPER ---
+    const fmt = (n) => 'Rp ' + Number(n || 0).toLocaleString('id-ID');
+    const showToast = (msg, type) => {
+        const c = document.getElementById('toastContainer');
+        if (!c) return;
+        const t = document.createElement('div');
+        t.className = `px-6 py-3 rounded-full text-white text-xs font-bold shadow-2xl anim-fade ${type === 'success' ? 'bg-green-600' : 'bg-red-600'}`;
+        t.textContent = msg;
+        c.appendChild(t);
+        setTimeout(() => { t.remove(); }, 3000);
+    };
+
+    // --- INITIALIZATION ---
+    function initApp() {
+        const initializeSDKs = () => {
+            // Check for Element SDK
+            if (window.elementSdk && typeof window.elementSdk.init === 'function') {
+                window.elementSdk.init({
+                    defaultConfig: { app_title: 'Kultum Dashboard', mosque_name: 'Masjid Al-Ikhlas' },
+                    onConfigChange: (config) => {
+                        const titleEl = document.getElementById('appTitle');
+                        const mosqueEl = document.getElementById('mosqueName');
+                        if (titleEl) titleEl.textContent = config.app_title || 'Kultum Dashboard';
+                        if (mosqueEl) mosqueEl.textContent = config.mosque_name || 'Masjid Al-Ikhlas';
+                    }
+                });
+            }
+
+            // Check for Data SDK
+            if (window.dataSdk && typeof window.dataSdk.init === 'function') {
+                window.dataSdk.init({
+                    onDataChanged(data) {
+                        allData = data || [];
+                        renderAll();
+                    }
+                });
+                console.log("Data SDK initialized successfully.");
+                return true;
+            }
+            return false;
+        };
+
+        // Retry logic for SDK initialization
+        let attempts = 0;
+        const maxAttempts = 20; // Increased attempts
+        const checkSdkInterval = setInterval(() => {
+            attempts++;
+            const success = initializeSDKs();
+            if (success) {
+                clearInterval(checkSdkInterval);
+                lucide.createIcons();
+            } else if (attempts >= maxAttempts) {
+                clearInterval(checkSdkInterval);
+                console.error('Data SDK not found after multiple attempts');
+                showToast('Gagal menghubungkan ke database server. Silakan muat ulang.', 'error');
+            }
+        }, 300); // Check every 300ms
+    }
+
+    // Run on window load
+    window.addEventListener('load', () => {
+        initApp();
+        lucide.createIcons();
+    });
+
+    // --- RENDERING ---
+    function renderAll() {
+        renderDashboard();
+        renderSchedule();
+        renderFinance();
+        lucide.createIcons();
+    }
+
+    function switchTab(tab) {
+        currentTab = tab;
+        ['dashboard', 'schedule', 'finance'].forEach(t => {
+            const page = document.getElementById('page-' + t);
+            const btn = document.getElementById('tab-' + t);
+            if (page) page.classList.toggle('hidden', t !== tab);
+            if (btn) btn.className = t === tab ? 'tab-active flex-1 py-3 text-sm font-700 text-center transition-all' : 'tab-inactive flex-1 py-3 text-sm font-700 text-center transition-all';
+        });
+        updateFabVisibility();
+        lucide.createIcons();
+    }
+
+    function updateFabVisibility() {
+        const fab = document.getElementById('fabAdd');
+        if (fab) fab.classList.toggle('hidden', !isAdmin || currentTab === 'dashboard');
+    }
+
+    function renderDashboard() {
+        const schedules = allData.filter(d => d.type === 'schedule');
+        const hadir = schedules.filter(s => s.status === 'hadir').length;
+        const tanpa = schedules.filter(s => s.status === 'tanpa').length;
+        const pending = schedules.filter(s => s.status === 'pending').length;
+        const total = schedules.length || 1;
+        const pct = Math.round((hadir / total) * 100);
+
+        const circumference = 87.96;
+        const offset = circumference - (pct / 100) * circumference;
+        const donut = document.getElementById('donutHadir');
+        if (donut) donut.style.strokeDasharray = `${circumference - offset} ${circumference}`;
+        
+        const pctEl = document.getElementById('donutPercent');
+        if (pctEl) pctEl.textContent = pct + '%';
+        
+        const sHadirEl = document.getElementById('statHadir');
+        if (sHadirEl) sHadirEl.textContent = hadir;
+        
+        const sTanpaEl = document.getElementById('statTanpa');
+        if (sTanpaEl) sTanpaEl.textContent = tanpa;
+        
+        const sPendingEl = document.getElementById('statPending');
+        if (sPendingEl) sPendingEl.textContent = pending;
+
+        const finances = allData.filter(d => d.type === 'finance');
+        const tIn = finances.filter(f => f.category === 'masuk').reduce((s, f) => s + (f.amount || 0), 0);
+        const tOut = finances.filter(f => f.category === 'keluar').reduce((s, f) => s + (f.amount || 0), 0);
+        
+        const sumInEl = document.getElementById('sumIn');
+        if (sumInEl) sumInEl.textContent = fmt(tIn);
+        
+        const sumOutEl = document.getElementById('sumOut');
+        if (sumOutEl) sumOutEl.textContent = fmt(tOut);
+        
+        const sumBalEl = document.getElementById('sumBalance');
+        if (sumBalEl) sumBalEl.textContent = fmt(tIn - tOut);
+
+        const today = new Date();
+        today.setHours(0,0,0,0);
+        const nextWeek = new Date(today); nextWeek.setDate(today.getDate() + 7);
+
+        const upcoming = schedules.filter(s => {
+            const d = new Date(s.date);
+            return d >= today && d <= nextWeek;
+        }).sort((a,b) => (a.date || '').localeCompare(b.date || ''));
+
+        const tbody = document.getElementById('upcomingTableBody');
+        if (tbody) {
+            tbody.innerHTML = upcoming.length ? upcoming.map(s => `
+                <tr class="border-b border-gray-50">
+                    <td class="py-3 font-600">${new Date(s.date).toLocaleDateString('id-ID', {day:'2-digit', month:'short'})}</td>
+                    <td class="py-3">${s.name || '-'}</td>
+                    <td class="py-3 text-right"><span class="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase ${s.status === 'hadir' ? 'status-hadir' : s.status === 'tanpa' ? 'status-tanpa' : 'status-pending'}">${s.status || 'pending'}</span></td>
+                </tr>
+            `).join('') : '<tr><td class="text-center py-6 opacity-30 italic">Tidak ada jadwal 7 hari kedepan</td></tr>';
+        }
+    }
+
+    function renderSchedule() {
+        const list = document.getElementById('page-schedule');
+        if (!list) return;
+        const schedules = allData.filter(d => d.type === 'schedule').sort((a,b) => (b.date || '').localeCompare(a.date || ''));
+        
+        list.innerHTML = schedules.length ? schedules.map(s => `
+            <div class="card-shadow rounded-2xl p-4 bg-white flex justify-between items-center anim-fade">
+                <div class="flex-1 min-w-0">
+                    <p class="text-[10px] font-bold opacity-40 uppercase">${s.date ? new Date(s.date).toLocaleDateString('id-ID', {weekday:'long', day:'numeric', month:'long'}) : '-'}</p>
+                    <h4 class="font-800 text-sm truncate">${s.name || '-'}</h4>
+                    <p class="text-xs opacity-60 italic truncate">${s.topic || 'Tema belum ditentukan'}</p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="px-2 py-1 rounded-lg text-[10px] font-bold uppercase ${s.status === 'hadir' ? 'status-hadir' : s.status === 'tanpa' ? 'status-tanpa' : 'status-pending'}">${s.status || 'pending'}</span>
+                    ${isAdmin ? `<button onclick="askDelete('${s.__backendId}')" class="p-2 text-red-400"><i data-lucide="trash-2" class="w-4 h-4"></i></button>` : ''}
+                </div>
+            </div>
+        `).join('') : '<div class="text-center py-12 opacity-30">Belum ada jadwal</div>';
+    }
+
+    function renderFinance() {
+        const list = document.getElementById('page-finance');
+        if (!list) return;
+        const finances = allData.filter(d => d.type === 'finance').sort((a,b) => (b.date || '').localeCompare(a.date || ''));
+        
+        list.innerHTML = finances.length ? finances.map(f => `
+            <div class="card-shadow rounded-2xl p-4 bg-white flex items-center gap-4 anim-fade">
+                <div class="w-10 h-10 rounded-xl flex items-center justify-center ${f.category === 'masuk' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}">
+                    <i data-lucide="${f.category === 'masuk' ? 'trending-up' : 'trending-down'}" class="w-5 h-5"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <h4 class="font-800 text-sm truncate">${f.description || '-'}</h4>
+                    <p class="text-[10px] opacity-40 uppercase">${f.date ? new Date(f.date).toLocaleDateString() : '-'}</p>
+                </div>
+                <div class="text-right">
+                    <p class="text-sm font-800 ${f.category === 'masuk' ? 'text-green-600' : 'text-red-600'}">${f.category === 'masuk' ? '+' : '-'}${fmt(f.amount)}</p>
+                    ${isAdmin ? `<button onclick="askDelete('${f.__backendId}')" class="text-[10px] text-red-400 font-bold uppercase mt-1">Hapus</button>` : ''}
+                </div>
+            </div>
+        `).join('') : '<div class="text-center py-12 opacity-30">Belum ada riwayat keuangan</div>';
+    }
+
+    function openPasswordModal() { document.getElementById('passwordOverlay').classList.remove('hidden'); }
+    function closePasswordModal() { document.getElementById('passwordOverlay').classList.add('hidden'); }
+    
+    function handlePasswordSubmit(e) {
+        e.preventDefault();
+        if (document.getElementById('passwordInput').value === 'admin123') {
+            isAdmin = true;
+            document.getElementById('adminBadge').classList.remove('hidden');
+            document.getElementById('fabAdmin').classList.add('hidden');
+            updateFabVisibility();
+            closePasswordModal();
+            renderAll();
+            showToast('Mode Admin Aktif', 'success');
+        } else {
+            showToast('Password Salah', 'error');
+        }
+    }
+
+    function openAddModal() {
+        const container = document.getElementById('formFields');
+        const title = document.getElementById('modalTitle');
+        if (currentTab === 'schedule') {
+            title.textContent = 'Jadwal Kultum Baru';
+            container.innerHTML = `
+                <input type="hidden" name="type" value="schedule">
+                <div class="space-y-1"><label class="text-[10px] font-bold opacity-50 uppercase">Nama Khotib</label><input type="text" name="name" required class="w-full border rounded-xl px-4 py-2 text-sm"></div>
+                <div class="space-y-1"><label class="text-[10px] font-bold opacity-50 uppercase">Tanggal</label><input type="date" name="date" required class="w-full border rounded-xl px-4 py-2 text-sm"></div>
+                <div class="space-y-1"><label class="text-[10px] font-bold opacity-50 uppercase">Tema/Topik</label><input type="text" name="topic" class="w-full border rounded-xl px-4 py-2 text-sm"></div>
+                <div class="space-y-1"><label class="text-[10px] font-bold opacity-50 uppercase">Status Awal</label>
+                    <select name="status" class="w-full border rounded-xl px-4 py-2 text-sm">
+                        <option value="pending">Pending</option>
+                        <option value="hadir">Hadir</option>
+                        <option value="tanpa">Tanpa Keterangan</option>
+                    </select>
+                </div>`;
+        } else {
+            title.textContent = 'Catatan Keuangan Baru';
+            container.innerHTML = `
+                <input type="hidden" name="type" value="finance">
+                <div class="space-y-1"><label class="text-[10px] font-bold opacity-50 uppercase">Keterangan</label><input type="text" name="description" required class="w-full border rounded-xl px-4 py-2 text-sm"></div>
+                <div class="space-y-1"><label class="text-[10px] font-bold opacity-50 uppercase">Jumlah (Rp)</label><input type="number" name="amount" required class="w-full border rounded-xl px-4 py-2 text-sm"></div>
+                <div class="space-y-1"><label class="text-[10px] font-bold opacity-50 uppercase">Tanggal</label><input type="date" name="date" required class="w-full border rounded-xl px-4 py-2 text-sm"></div>
+                <div class="space-y-1"><label class="text-[10px] font-bold opacity-50 uppercase">Kategori</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <label class="border rounded-xl p-3 flex items-center justify-center gap-2 cursor-pointer has-[:checked]:bg-green-50 has-[:checked]:border-green-500"><input type="radio" name="category" value="masuk" checked class="hidden"> <span class="text-xs font-bold">PEMASUKAN</span></label>
+                        <label class="border rounded-xl p-3 flex items-center justify-center gap-2 cursor-pointer has-[:checked]:bg-red-50 has-[:checked]:border-red-500"><input type="radio" name="category" value="keluar" class="hidden"> <span class="text-xs font-bold">PENGELUARAN</span></label>
+                    </div>
+                </div>`;
+        }
+        document.getElementById('modalOverlay').classList.remove('hidden');
+    }
+
+    function closeModal() { document.getElementById('modalOverlay').classList.add('hidden'); }
+
+    async function handleFormSubmit(e) {
+        e.preventDefault();
+        if (!window.dataSdk) {
+            showToast('Gagal terhubung ke database. Coba muat ulang.', 'error');
+            return;
+        }
+
+        const btn = document.getElementById('submitBtn');
+        const txt = document.getElementById('submitText');
+        const loader = document.getElementById('submitLoader');
+
+        btn.disabled = true;
+        txt.classList.add('hidden');
+        loader.classList.remove('hidden');
+
+        const obj = Object.fromEntries(new FormData(e.target).entries());
+        if(obj.amount) obj.amount = Number(obj.amount);
+
+        try {
+            const res = await window.dataSdk.create(obj);
+            if (res.isOk) {
+                showToast('Data berhasil disimpan', 'success');
+                closeModal();
+                e.target.reset();
+            } else {
+                showToast('Gagal menyimpan data ke database.', 'error');
+            }
+        } catch (err) {
+            console.error(err);
+            showToast('Terjadi kesalahan saat menyimpan.', 'error');
+        } finally {
+            btn.disabled = false;
+            txt.classList.remove('hidden');
+            loader.classList.add('hidden');
+        }
+    }
+
+    function askDelete(id) { pendingDeleteRecord = id; document.getElementById('deleteOverlay').classList.remove('hidden'); }
+    function closeDeleteConfirm() { pendingDeleteRecord = null; document.getElementById('deleteOverlay').classList.add('hidden'); }
+
+    async function confirmDelete() {
+        if (!pendingDeleteRecord || !window.dataSdk) return;
+        const res = await window.dataSdk.delete(pendingDeleteRecord);
+        if (res.isOk) showToast('Data dihapus', 'success');
+        else showToast('Gagal menghapus data', 'error');
+        closeDeleteConfirm();
+    }
+  </script>
+ </body>
+</html>
